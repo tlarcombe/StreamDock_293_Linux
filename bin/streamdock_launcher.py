@@ -52,6 +52,7 @@ class StreamDockLauncherDirect:
         self.device = None
         self.icon_manager = None
         self.running = False
+        self.display_on = True
         
         # Key mapping (Physical code -> Logical ID)
         self.key_map = {
@@ -116,6 +117,14 @@ class StreamDockLauncherDirect:
         logger.info("=" * 70)
         logger.info(f"Configured keys: {sorted(self.config.bindings.keys())}")
         logger.info("Press any key to execute its action")
+        
+        # Setup special actions
+        for binding in self.config.bindings.values():
+            from actions import ToggleDisplayAction
+            if isinstance(binding.action, ToggleDisplayAction):
+                binding.action.callback = self.toggle_display
+                logger.info(f"  Configured display toggle on key {binding.key_number}")
+
         logger.info("Press Ctrl+C to exit")
         logger.info("=" * 70)
 
@@ -201,6 +210,26 @@ class StreamDockLauncherDirect:
             self._send_report(payload)
         except Exception as e:
             logger.error(f"Failed to set brightness: {e}")
+
+    def toggle_display(self) -> bool:
+        """Toggle the display on/off"""
+        self.display_on = not self.display_on
+        state_str = "ON" if self.display_on else "OFF"
+        logger.info(f"Toggling display: {state_str}")
+
+        if not self.display_on:
+            # Turn OFF: Send black images to all keys
+            logger.info("Turning display OFF (sending black icons)")
+            # Path to a black icon if it exists, or let icon_manager handle null
+            for key_id in range(1, 16):
+                processed_path = self.icon_manager.prepare_icon(None, "")
+                self.set_key_image(key_id, processed_path)
+        else:
+            # Turn ON: Restore original icons
+            logger.info("Turning display ON (restoring icons)")
+            self.update_all_keys()
+            
+        return True
 
     def set_key_image(self, key: int, image_path: str):
         """Send an image to a specific key"""

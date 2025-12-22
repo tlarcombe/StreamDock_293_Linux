@@ -127,11 +127,11 @@
       }
     },
     "15": {
-      "name": "Unassigned",
-      "description": "No action",
-      "icon": null,
+      "name": "Display Toggle",
+      "description": "Turn Stream Dock display on/off",
+      "icon": "/home/tlarcombe/projects/StreamDock/icons/power.png",
       "action": {
-        "type": "none"
+        "type": "toggle_display"
       }
     }
   }

@@ -215,6 +215,23 @@ class RunCommandAction(Action):
             return False
 
 
+class ToggleDisplayAction(Action):
+    """Toggle the Stream Dock display on/off"""
+
+    def __init__(self, config: Dict[str, Any]):
+        super().__init__(config)
+        self.callback = None # Set by launcher after creation
+
+    def execute(self) -> bool:
+        """Execute the toggle via callback"""
+        if self.callback:
+            logger.info("Triggering display toggle callback")
+            return self.callback()
+        else:
+            logger.warning("ToggleDisplayAction executed but no callback set")
+            return False
+
+
 class NoAction(Action):
     """Placeholder action that does nothing"""
 
@@ -233,6 +250,7 @@ ACTION_TYPES = {
     'launch_app': LaunchAppAction,
     'run_script': RunScriptAction,
     'run_command': RunCommandAction,
+    'toggle_display': ToggleDisplayAction,
     'none': NoAction,
 }
 
