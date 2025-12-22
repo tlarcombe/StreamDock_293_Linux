@@ -32,6 +32,16 @@ logger = logging.getLogger(__name__)
 VENDOR_ID = 0x5500
 PRODUCT_ID = 0x1001
 
+# HID Protocol Constants
+PREFIX = b"CRT\x00\x00"
+CMD_BAT = b"BAT"
+CMD_STP = b"STP\x00\x00"
+CMD_LIG = b"LIG\x00\x00"
+CMD_CLE = b"CLE\x00\x00\x00"
+
+# Report size
+REPORT_SIZE = 512
+
 
 class StreamDockLauncherDirect:
     """Direct HID-based launcher (no SDK)"""
@@ -42,6 +52,28 @@ class StreamDockLauncherDirect:
         self.device = None
         self.icon_manager = None
         self.running = False
+        
+        # Key mapping (Physical code -> Logical ID)
+        self.key_map = {
+            0x0b: 1, 0x0c: 2, 0x0d: 3, 0x0e: 4, 0x0f: 5,    # Top row
+            0x06: 6, 0x07: 7, 0x08: 8, 0x09: 9, 0x0a: 10,   # Middle row
+            0x01: 11, 0x02: 12, 0x03: 13, 0x04: 14, 0x05: 15 # Bottom row
+        }
+
+    def _send_report(self, payload: bytes):
+        """Send a 512-byte report with leading 0x00 byte for Report ID 0"""
+        if not self.device:
+            return
+        
+        # Ensure payload is exactly REPORT_SIZE (512)
+        if len(payload) > REPORT_SIZE:
+            payload = payload[:REPORT_SIZE]
+        elif len(payload) < REPORT_SIZE:
+            payload = payload.ljust(REPORT_SIZE, b"\x00")
+            
+        # Send with leading 0x00 (Report ID 0)
+        # Total size sent to hidapi.write() is 513 bytes
+        self.device.write(b"\x00" + payload)
 
     def initialize(self):
         """Initialize all components"""
@@ -53,16 +85,16 @@ class StreamDockLauncherDirect:
         logger.info(f"Loading configuration from: {self.config_path}")
         self.config = LauncherConfig(self.config_path)
 
-        # Initialize icon manager (without SDK device)
+        # Initialize icon manager (specifically for Stream Dock 293)
         logger.info("Initializing icon manager...")
-        self.icon_manager = IconManager(button_size=(100, 100), rotation=0)
+        self.icon_manager = IconManager(button_size=(100, 100), rotation=180)
 
         # Open HID device directly
         logger.info(f"Opening HID device (VID: 0x{VENDOR_ID:04x}, PID: 0x{PRODUCT_ID:04x})...")
         self.device = hid.device()
         try:
             self.device.open(VENDOR_ID, PRODUCT_ID)
-            self.device.set_nonblocking(1)  # Non-blocking reads
+            self.device.set_nonblocking(1)  # Restore non-blocking reads
             logger.info("✅ Device opened successfully (Direct HID)")
 
             # Get device info
@@ -70,6 +102,10 @@ class StreamDockLauncherDirect:
             product = self.device.get_product_string()
             logger.info(f"  Manufacturer: {manufacturer}")
             logger.info(f"  Product: {product}")
+
+            # Apply initial configuration
+            self.set_brightness(self.config.brightness)
+            self.update_all_keys()
 
         except Exception as e:
             logger.error(f"Failed to open HID device: {e}")
@@ -95,26 +131,35 @@ class StreamDockLauncherDirect:
             while self.running:
                 try:
                     # Read from HID device (non-blocking)
-                    data = self.device.read(64)
+                    # Use REPORT_SIZE (512) as per endpoint wMaxPacketSize
+                    data = self.device.read(REPORT_SIZE)
 
-                    if data and len(data) >= 11:
-                        # Check if it's a key event
-                        # data[9] = key number (1-15 or 0xFF for status)
-                        # data[10] = state (0x01 = pressed, 0x02 = released)
+                    if data:
+                        logger.debug(f"HID Data ({len(data)} bytes): {bytes(data).hex()}")
 
-                        if data[9] != 0xFF and data[9] != 0:
-                            key = data[9]
-                            state = data[10]
+                        if len(data) >= 11:
+                            # data[9] = key (physical code)
+                            # data[10] = state (1=pressed, 2=released)
+                            if data[9] != 0xFF and data[9] != 0:
+                                raw_key = data[9]
+                                state = data[10]
 
-                            # Normalize state
-                            if state == 0x01:
-                                logger.info(f"Key {key} pressed")
-                                self._handle_key_press(key)
-                            elif state == 0x02:
-                                logger.debug(f"Key {key} released")
+                                # Map physical key to logical key
+                                key = self.key_map.get(raw_key, raw_key)
 
+                                # Normalize state
+                                if state == 0x01:
+                                    logger.info(f"Key {key} pressed (raw: 0x{raw_key:02x})")
+                                    self._handle_key_press(key)
+                                elif state == 0x02:
+                                    logger.info(f"Key {key} released (raw: 0x{raw_key:02x})")
+
+                except OSError as e:
+                    # Log but keep running unless it's a fatal error
+                    logger.debug(f"HID read error: {e}")
+                    time.sleep(1) # Wait longer on error
                 except Exception as e:
-                    logger.error(f"Error reading HID data: {e}")
+                    logger.error(f"Unexpected error in HID loop: {e}", exc_info=True)
 
                 # Small delay to avoid busy waiting
                 time.sleep(0.01)
@@ -143,6 +188,74 @@ class StreamDockLauncherDirect:
                 logger.warning(f"⚠️ Action failed: {binding.name}")
         except Exception as e:
             logger.error(f"❌ Error handling key press: {e}", exc_info=True)
+
+    def set_brightness(self, value: int):
+        """Set device brightness (0-100)"""
+        if not self.device:
+            return
+
+        logger.info(f"Setting brightness to {value}%")
+        try:
+            # Command: PREFIX + CMD_LIG + brightness_byte
+            payload = PREFIX + CMD_LIG + bytes([value])
+            self._send_report(payload)
+        except Exception as e:
+            logger.error(f"Failed to set brightness: {e}")
+
+    def set_key_image(self, key: int, image_path: str):
+        """Send an image to a specific key"""
+        if not self.device:
+            return
+
+        try:
+            if not os.path.exists(image_path):
+                logger.error(f"Image not found: {image_path}")
+                return
+
+            with open(image_path, "rb") as f:
+                img_data = f.read()
+
+            size = len(img_data)
+            logger.debug(f"Sending image to key {key} ({size} bytes)")
+
+            # 1. Send Header (Prefix + BAT + size[4] + key[1])
+            # size is big-endian 4 bytes
+            header = PREFIX + CMD_BAT + size.to_bytes(4, "big") + bytes([key])
+            self._send_report(header)
+
+            # 2. Send Data Chunks (raw data, 512 bytes each, NO PREFIX)
+            for i in range(0, size, REPORT_SIZE):
+                chunk = img_data[i : i + REPORT_SIZE]
+                self._send_report(chunk)
+
+            # 3. Send Refresh/Stop Command
+            refresh = PREFIX + CMD_STP
+            self._send_report(refresh)
+
+        except Exception as e:
+            logger.error(f"Failed to set image for key {key}: {e}")
+
+    def update_all_keys(self):
+        """Apply icons to all configured keys"""
+        logger.info("Applying icons to all keys...")
+        for key_id in range(1, 16):
+            binding = self.config.get_binding(key_id)
+            icon_path = None
+            label = ""
+
+            if binding:
+                label = binding.name
+                if binding.icon_spec:
+                    if binding.icon_spec.startswith("auto:"):
+                        icon_path = self.icon_manager.find_system_icon(binding.icon_spec[5:])
+                    else:
+                        icon_path = binding.icon_spec
+
+            # Prepare icon (will create default if path is None)
+            processed_path = self.icon_manager.prepare_icon(icon_path, label)
+            self.set_key_image(key_id, processed_path)
+
+        logger.info("✅ All icons applied")
 
     def shutdown(self):
         """Clean shutdown"""

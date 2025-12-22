@@ -88,15 +88,22 @@ echo ""
 echo "Checking USB permissions..."
 
 UDEV_RULES="/etc/udev/rules.d/99-streamdock.rules"
+GROUP_NAME="plugdev"
+
+# Ensure the group exists
+if ! getent group "$GROUP_NAME" > /dev/null; then
+    echo "Creating group '$GROUP_NAME'..."
+    sudo groupadd "$GROUP_NAME"
+fi
 
 if [ ! -f "$UDEV_RULES" ]; then
     echo "Creating udev rules for Stream Dock..."
 
-    sudo tee "$UDEV_RULES" > /dev/null << 'EOF'
+    sudo tee "$UDEV_RULES" > /dev/null << EOF
 # udev rules for Stream Dock USB devices
 # Stream Dock 293 (VID: 5500, PID: 1001)
-SUBSYSTEM=="usb", ATTRS{idVendor}=="5500", ATTRS{idProduct}=="1001", MODE="0666", GROUP="plugdev"
-KERNEL=="hidraw*", ATTRS{idVendor}=="5500", MODE="0666", GROUP="plugdev"
+SUBSYSTEM=="usb", ATTRS{idVendor}=="5500", ATTRS{idProduct}=="1001", MODE="0666", GROUP="$GROUP_NAME"
+KERNEL=="hidraw*", ATTRS{idVendor}=="5500", MODE="0666", GROUP="$GROUP_NAME"
 EOF
 
     sudo udevadm control --reload-rules
@@ -104,13 +111,20 @@ EOF
 
     echo -e "${GREEN}✓ USB permissions configured${NC}"
 else
+    # Check if the existing rules use the correct group
+    if ! grep -q "GROUP=\"$GROUP_NAME\"" "$UDEV_RULES"; then
+        echo -e "${YELLOW}Updating udev rules to use group '$GROUP_NAME'...${NC}"
+        sudo sed -i "s/GROUP=\"[^\"]*\"/GROUP=\"$GROUP_NAME\"/g" "$UDEV_RULES"
+        sudo udevadm control --reload-rules
+        sudo udevadm trigger
+    fi
     echo -e "${GREEN}✓ USB permissions already configured${NC}"
 fi
 
-# Add user to plugdev group if not already
-if ! groups | grep -q plugdev; then
-    echo "Adding user to plugdev group..."
-    sudo usermod -a -G plugdev "$USER"
+# Add user to group if not already
+if ! groups | grep -q "\b$GROUP_NAME\b"; then
+    echo "Adding user to $GROUP_NAME group..."
+    sudo usermod -a -G "$GROUP_NAME" "$USER"
     echo -e "${YELLOW}⚠ You need to log out and back in for group changes to take effect${NC}"
 fi
 

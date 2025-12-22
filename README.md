@@ -160,9 +160,8 @@ Check the service logs:
 journalctl --user -u streamdock-launcher -n 50
 ```
 
-### Icons Not Displaying
-
-Icons are currently not set by this version (HID-only mode). The SDK's icon-setting functionality requires the buggy C library which causes crashes. A future version will implement direct HID commands for setting icons.
+### Icons Displaying
+Icons are now supported using direct HID commands. The launcher automatically processes images to the required format (100x100 JPEG, 180° rotation) and sends them to the device on startup.
 
 ### Button Presses Not Detected
 
@@ -195,13 +194,13 @@ The launcher uses direct HID communication instead of the SDK's C library to avo
 
 ## Known Limitations
 
-- **No Icon Setting**: Currently cannot set key icons (requires SDK which crashes)
+- **Icon Setting Support**: Correctly sets key icons using direct HID protocol
 - **Stream Dock 293 Only**: Only tested with Stream Dock 293
 - **Linux Only**: Windows and macOS not supported
 
 ## Future Enhancements
 
-- [ ] Implement direct HID commands for setting key icons
+- [x] Implement direct HID commands for setting key icons
 - [ ] Support for other Stream Dock models
 - [ ] GUI configuration tool
 - [ ] Modifier keys (Ctrl, Shift, Alt)

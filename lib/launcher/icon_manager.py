@@ -95,7 +95,7 @@ class IconManager:
                 self.temp_dir,
                 f"icon_{hash(icon_path)}_{hash(label)}.jpg"
             )
-            img.save(output_path, 'JPEG', quality=95, subsampling=0)
+            img.save(output_path, 'JPEG', quality=100, subsampling=0)
 
             logger.debug(f"Processed icon: {icon_path} -> {output_path}")
             return output_path
@@ -169,7 +169,7 @@ class IconManager:
 
             # Save
             output_path = os.path.join(self.temp_dir, f"default_{hash(label)}.jpg")
-            img.save(output_path, 'JPEG', quality=95, subsampling=0)
+            img.save(output_path, 'JPEG', quality=100, subsampling=0)
 
             return output_path
 
