@@ -5,115 +5,101 @@
   },
   "keys": {
     "1": {
-      "name": "LibreOffice Writer",
-      "description": "Open LibreOffice Writer",
-      "icon": "auto:libreoffice-writer",
+      "name": "Betterbird",
+      "description": "Launch Betterbird email client",
+      "icon": "auto:betterbird",
       "action": {
         "type": "launch_app",
-        "command": "libreoffice",
-        "args": ["--writer"],
+        "command": "betterbird",
         "detach": true
       }
     },
     "2": {
-      "name": "Firefox",
-      "description": "Launch Firefox browser",
-      "icon": "auto:firefox",
+      "name": "Chromium",
+      "description": "Launch Chromium browser",
+      "icon": "auto:chromium",
       "action": {
         "type": "launch_app",
-        "command": "firefox",
+        "command": "chromium",
         "detach": true
       }
     },
     "3": {
+      "name": "Geany",
+      "description": "Launch Geany text editor",
+      "icon": "auto:geany",
+      "action": {
+        "type": "launch_app",
+        "command": "geany",
+        "detach": true
+      }
+    },
+    "4": {
       "name": "Terminal",
       "description": "Open terminal",
-      "icon": "auto:terminal",
+      "icon": "/home/tlarcombe/projects/StreamDock/icons/terminal.png",
       "action": {
         "type": "launch_app",
         "command": "xfce4-terminal",
         "detach": true
       }
     },
-    "4": {
+    "5": {
       "name": "File Manager",
-      "description": "Open file manager",
-      "icon": "auto:system-file-manager",
+      "description": "Open Thunar file manager",
+      "icon": "/home/tlarcombe/projects/StreamDock/icons/file_manager.png",
       "action": {
         "type": "launch_app",
         "command": "thunar",
         "detach": true
       }
     },
-    "5": {
-      "name": "Calculator",
-      "description": "Open calculator",
-      "icon": "auto:galculator",
-      "action": {
-        "type": "launch_app",
-        "command": "galculator",
-        "detach": true
-      }
-    },
     "6": {
-      "name": "Screenshot",
-      "description": "Take a screenshot",
-      "icon": "auto:applets-screenshooter",
+      "name": "Unassigned",
+      "description": "No action",
+      "icon": null,
       "action": {
-        "type": "run_command",
-        "command": "xfce4-screenshooter",
-        "detach": true
+        "type": "none"
       }
     },
     "7": {
-      "name": "Lock Screen",
-      "description": "Lock the screen",
+      "name": "Unassigned",
+      "description": "No action",
       "icon": null,
       "action": {
-        "type": "run_command",
-        "command": "xflock4",
-        "detach": true
+        "type": "none"
       }
     },
     "8": {
-      "name": "Volume Up",
-      "description": "Increase volume",
+      "name": "Unassigned",
+      "description": "No action",
       "icon": null,
       "action": {
-        "type": "run_command",
-        "command": "pactl set-sink-volume @DEFAULT_SINK@ +5%",
-        "detach": false
+        "type": "none"
       }
     },
     "9": {
-      "name": "Volume Down",
-      "description": "Decrease volume",
+      "name": "Unassigned",
+      "description": "No action",
       "icon": null,
       "action": {
-        "type": "run_command",
-        "command": "pactl set-sink-volume @DEFAULT_SINK@ -5%",
-        "detach": false
+        "type": "none"
       }
     },
     "10": {
-      "name": "Mute",
-      "description": "Toggle mute",
+      "name": "Unassigned",
+      "description": "No action",
       "icon": null,
       "action": {
-        "type": "run_command",
-        "command": "pactl set-sink-mute @DEFAULT_SINK@ toggle",
-        "detach": false
+        "type": "none"
       }
     },
     "11": {
-      "name": "Example Script",
-      "description": "Run a custom script",
+      "name": "Unassigned",
+      "description": "No action",
       "icon": null,
       "action": {
-        "type": "run_script",
-        "script": "~/scripts/example.sh",
-        "args": [],
-        "detach": false
+        "type": "none"
       }
     },
     "12": {
