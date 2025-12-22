@@ -1,0 +1,25 @@
+[Unit]
+Description=Stream Dock Launcher
+Documentation=https://github.com/MiraboxSpace/StreamDock-Plugin-SDK
+After=multi-user.target
+Wants=multi-user.target
+
+[Service]
+Type=simple
+User=%i
+Group=%i
+ExecStart=/usr/bin/python3 /home/%i/projects/StreamDock/bin/streamdock_launcher.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+
+# Allow access to HID devices
+SupplementaryGroups=plugdev
+
+[Install]
+WantedBy=multi-user.target

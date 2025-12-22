@@ -1,0 +1,152 @@
+{
+  "device": {
+    "brightness": 80,
+    "background": null
+  },
+  "keys": {
+    "1": {
+      "name": "LibreOffice Writer",
+      "description": "Open LibreOffice Writer",
+      "icon": "auto:libreoffice-writer",
+      "action": {
+        "type": "launch_app",
+        "command": "libreoffice",
+        "args": ["--writer"],
+        "detach": true
+      }
+    },
+    "2": {
+      "name": "Firefox",
+      "description": "Launch Firefox browser",
+      "icon": "auto:firefox",
+      "action": {
+        "type": "launch_app",
+        "command": "firefox",
+        "detach": true
+      }
+    },
+    "3": {
+      "name": "Terminal",
+      "description": "Open terminal",
+      "icon": "auto:terminal",
+      "action": {
+        "type": "launch_app",
+        "command": "xfce4-terminal",
+        "detach": true
+      }
+    },
+    "4": {
+      "name": "File Manager",
+      "description": "Open file manager",
+      "icon": "auto:system-file-manager",
+      "action": {
+        "type": "launch_app",
+        "command": "thunar",
+        "detach": true
+      }
+    },
+    "5": {
+      "name": "Calculator",
+      "description": "Open calculator",
+      "icon": "auto:galculator",
+      "action": {
+        "type": "launch_app",
+        "command": "galculator",
+        "detach": true
+      }
+    },
+    "6": {
+      "name": "Screenshot",
+      "description": "Take a screenshot",
+      "icon": "auto:applets-screenshooter",
+      "action": {
+        "type": "run_command",
+        "command": "xfce4-screenshooter",
+        "detach": true
+      }
+    },
+    "7": {
+      "name": "Lock Screen",
+      "description": "Lock the screen",
+      "icon": null,
+      "action": {
+        "type": "run_command",
+        "command": "xflock4",
+        "detach": true
+      }
+    },
+    "8": {
+      "name": "Volume Up",
+      "description": "Increase volume",
+      "icon": null,
+      "action": {
+        "type": "run_command",
+        "command": "pactl set-sink-volume @DEFAULT_SINK@ +5%",
+        "detach": false
+      }
+    },
+    "9": {
+      "name": "Volume Down",
+      "description": "Decrease volume",
+      "icon": null,
+      "action": {
+        "type": "run_command",
+        "command": "pactl set-sink-volume @DEFAULT_SINK@ -5%",
+        "detach": false
+      }
+    },
+    "10": {
+      "name": "Mute",
+      "description": "Toggle mute",
+      "icon": null,
+      "action": {
+        "type": "run_command",
+        "command": "pactl set-sink-mute @DEFAULT_SINK@ toggle",
+        "detach": false
+      }
+    },
+    "11": {
+      "name": "Example Script",
+      "description": "Run a custom script",
+      "icon": null,
+      "action": {
+        "type": "run_script",
+        "script": "~/scripts/example.sh",
+        "args": [],
+        "detach": false
+      }
+    },
+    "12": {
+      "name": "Unassigned",
+      "description": "No action",
+      "icon": null,
+      "action": {
+        "type": "none"
+      }
+    },
+    "13": {
+      "name": "Unassigned",
+      "description": "No action",
+      "icon": null,
+      "action": {
+        "type": "none"
+      }
+    },
+    "14": {
+      "name": "Unassigned",
+      "description": "No action",
+      "icon": null,
+      "action": {
+        "type": "none"
+      }
+    },
+    "15": {
+      "name": "Unassigned",
+      "description": "No action",
+      "icon": null,
+      "action": {
+        "type": "none"
+      }
+    }
+  }
+}
