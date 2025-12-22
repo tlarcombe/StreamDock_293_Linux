@@ -218,15 +218,16 @@ class StreamDockLauncherDirect:
         logger.info(f"Toggling display: {state_str}")
 
         if not self.display_on:
-            # Turn OFF: Send black images to all keys
-            logger.info("Turning display OFF (sending black icons)")
-            # Path to a black icon if it exists, or let icon_manager handle null
+            # Turn OFF: Send black images to all keys and kill backlight
+            logger.info("Turning display OFF (killing backlight and sending black icons)")
+            self.set_brightness(0)
             for key_id in range(1, 16):
                 processed_path = self.icon_manager.prepare_icon(None, "")
                 self.set_key_image(key_id, processed_path)
         else:
-            # Turn ON: Restore original icons
-            logger.info("Turning display ON (restoring icons)")
+            # Turn ON: Restore original icons and brightness
+            logger.info("Turning display ON (restoring icons and brightness)")
+            self.set_brightness(self.config.brightness)
             self.update_all_keys()
             
         return True
