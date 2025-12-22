@@ -1,4 +1,4 @@
-# Stream Dock Launcher
+# Yinker 293 Stream Dock Launcher
 
 A customizable application launcher for Stream Dock devices on Linux.
 
