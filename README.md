@@ -38,7 +38,10 @@ The installer will:
 3. Install systemd user service
 4. Optionally enable and start the service
 
-**Note:** You may need to log out and back in after installation for group permissions to take effect.
+**Note:** You may need to log out and back in after installation for group permissions to take effect. To ensure the service starts automatically on boot without requiring a login, enable user lingering:
+```bash
+sudo loginctl enable-linger $USER
+```
 
 ## Configuration
 

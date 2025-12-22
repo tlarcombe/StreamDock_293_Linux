@@ -143,6 +143,12 @@ systemctl --user daemon-reload
 
 echo -e "${GREEN}✓ Systemd service installed${NC}"
 
+# Enable user lingering for boot support
+echo ""
+echo "Enabling user lingering (allows service to start on boot without login)..."
+sudo loginctl enable-linger "$USER"
+echo -e "${GREEN}✓ User lingering enabled${NC}"
+
 # Ask if user wants to enable and start the service now
 echo ""
 read -p "Enable and start the service now? (y/n) " -n 1 -r
