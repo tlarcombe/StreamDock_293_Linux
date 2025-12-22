@@ -27,7 +27,7 @@
     "3": {
       "name": "Geany",
       "description": "Launch Geany text editor",
-      "icon": "auto:geany",
+      "icon": "/home/tlarcombe/projects/StreamDock/icons/editor.png",
       "action": {
         "type": "launch_app",
         "command": "geany",
