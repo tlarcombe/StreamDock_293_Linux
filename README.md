@@ -7,7 +7,9 @@ A customizable application launcher for Stream Dock devices on Linux.
 - ✅ **Direct HID Communication** - No proprietary software required
 - ✅ **Customizable Key Bindings** - Assign applications, scripts, or commands to any key
 - ✅ **Auto Icon Detection** - Automatically finds system icons for applications
+- ✅ **Display Toggle (Sleep Mode)** - Turn off backlight (0%) and icons for total darkness
 - ✅ **Systemd Service** - Runs automatically on startup
+- ✅ **Zero-Glow Sleep** - Explicit brightness control eliminates backlight bleed
 - ✅ **Crash-Free** - Bypasses buggy SDK C library with direct HID access
 
 ## Supported Devices
@@ -97,6 +99,14 @@ Edit the configuration file at `~/projects/StreamDock/config/config.json`:
   "detach": false
 }
 ```
+#### 4. Display Toggle
+Special action to turn the unit dark:
+```json
+{
+  "type": "toggle_display"
+}
+```
+*Note: In sleep mode, buttons remain active. A second press on the toggle key restores icons and brightness.*
 
 ### Icon Specifications
 
@@ -201,9 +211,10 @@ The launcher uses direct HID communication instead of the SDK's C library to avo
 ## Future Enhancements
 
 - [x] Implement direct HID commands for setting key icons
+- [x] Implement Sleep Mode (backlight 0% + black icons)
+- [x] Support for custom minimalist icons
 - [ ] Support for other Stream Dock models
 - [ ] GUI configuration tool
-- [ ] Modifier keys (Ctrl, Shift, Alt)
 - [ ] Multi-page support
 
 ## License
