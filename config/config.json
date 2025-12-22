@@ -16,11 +16,11 @@
     },
     "2": {
       "name": "Chromium",
-      "description": "Launch Chromium browser",
+      "description": "Launch Chromium browser via custom script",
       "icon": "auto:chromium",
       "action": {
-        "type": "launch_app",
-        "command": "chromium",
+        "type": "run_command",
+        "command": "/usr/local/bin/sh/WebBrowser_at_Mouse",
         "detach": true
       }
     },
