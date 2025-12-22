@@ -115,8 +115,8 @@ class IconManager:
             str: Path to generated icon
         """
         try:
-            # Create blank image
-            img = Image.new('RGB', self.button_size, color='#2a2a2a')
+            # Create blank image (pure black)
+            img = Image.new('RGB', self.button_size, color='black')
             draw = ImageDraw.Draw(img)
 
             if label:
@@ -155,13 +155,6 @@ class IconManager:
                     x = (self.button_size[0] - text_width) // 2
                     y = y_offset + i * 18
                     draw.text((x, y), line, fill='white', font=font)
-
-            # Add border
-            draw.rectangle(
-                [0, 0, self.button_size[0] - 1, self.button_size[1] - 1],
-                outline='#555555',
-                width=2
-            )
 
             # Rotate
             if self.rotation:
