@@ -57,6 +57,57 @@ class IconManager:
         self.icon_cache[cache_key] = processed_path
         return processed_path
 
+    def prepare_background(self, color_or_path: Optional[str] = "black") -> str:
+        """
+        Prepare a full-screen background image
+        
+        Args:
+            color_or_path: Solid color name OR path to image file
+            
+        Returns:
+            str: Path to processed background image
+        """
+        # Stream Dock 293 background resolution is 480x272
+        bg_size = (480, 272)
+        
+        cache_key = f"bg:{color_or_path}"
+        if cache_key in self.icon_cache:
+            cached_path = self.icon_cache[cache_key]
+            if os.path.exists(cached_path):
+                return cached_path
+                
+        try:
+            if color_or_path and os.path.exists(color_or_path):
+                # Load from file
+                img = Image.open(color_or_path)
+                if img.mode != 'RGB':
+                    img = img.convert('RGB')
+                img = img.resize(bg_size, Image.Resampling.LANCZOS)
+            else:
+                # Create solid color
+                color = color_or_path if color_or_path else "black"
+                img = Image.new('RGB', bg_size, color=color)
+                
+            # Rotate if needed (backgrounds usually don't need 180 flip if they are full screen 
+            # and the SDK/firmware handles them differently, but let's stick to consistent rotation)
+            if self.rotation:
+                img = img.rotate(self.rotation)
+                
+            output_path = os.path.join(self.temp_dir, f"bg_{hash(color_or_path)}.jpg")
+            img.save(output_path, 'JPEG', quality=95, subsampling=0)
+            
+            self.icon_cache[cache_key] = output_path
+            return output_path
+        except Exception as e:
+            logger.error(f"Failed to prepare background: {e}")
+            # Fallback to solid black
+            img = Image.new('RGB', bg_size, color='black')
+            if self.rotation:
+                img = img.rotate(self.rotation)
+            output_path = os.path.join(self.temp_dir, "bg_fallback.jpg")
+            img.save(output_path, 'JPEG')
+            return output_path
+
     def _process_icon_file(self, icon_path: str, label: str = "") -> str:
         """
         Process an existing icon file

@@ -66,15 +66,23 @@ class StreamDockLauncherDirect:
         if not self.device:
             return
         
-        # Ensure payload is exactly REPORT_SIZE (512)
-        if len(payload) > REPORT_SIZE:
-            payload = payload[:REPORT_SIZE]
-        elif len(payload) < REPORT_SIZE:
-            payload = payload.ljust(REPORT_SIZE, b"\x00")
-            
-        # Send with leading 0x00 (Report ID 0)
-        # Total size sent to hidapi.write() is 513 bytes
-        self.device.write(b"\x00" + payload)
+        try:
+            # Ensure payload is exactly REPORT_SIZE (512)
+            if len(payload) > REPORT_SIZE:
+                payload = payload[:REPORT_SIZE]
+            elif len(payload) < REPORT_SIZE:
+                payload = payload.ljust(REPORT_SIZE, b"\x00")
+                
+            # Send with leading 0x00 (Report ID 0)
+            # Total size sent to hidapi.write() is 513 bytes
+            self.device.write(b"\x00" + payload)
+        except OSError as e:
+            logger.warning(f"HID write error: {e}")
+            # Try to re-open device on next attempt if it's a fatal-looking error
+            if "device" in str(e).lower() or "broken pipe" in str(e).lower():
+                self.device = None
+        except Exception as e:
+            logger.error(f"Unexpected error in _send_report: {e}")
 
     def initialize(self):
         """Initialize all components"""
@@ -95,7 +103,7 @@ class StreamDockLauncherDirect:
         self.device = hid.device()
         try:
             self.device.open(VENDOR_ID, PRODUCT_ID)
-            self.device.set_nonblocking(1)  # Restore non-blocking reads
+            # self.device.set_nonblocking(1)  # Switching to explicit timeout in read()
             logger.info("✅ Device opened successfully (Direct HID)")
 
             # Get device info
@@ -106,7 +114,9 @@ class StreamDockLauncherDirect:
 
             # Apply initial configuration
             self.set_brightness(self.config.brightness)
-            self.update_all_keys()
+            
+            # Initial update of all keys and background
+            self.update_all_keys(include_background=True)
 
         except Exception as e:
             logger.error(f"Failed to open HID device: {e}")
@@ -137,14 +147,35 @@ class StreamDockLauncherDirect:
         logger.info("Starting HID polling loop...")
 
         try:
+            last_heartbeat = time.time()
             while self.running:
+                # Re-initialize device if it was lost
+                if not self.device:
+                    logger.info("Attempting to reconnect HID device...")
+                    try:
+                        self.device = hid.device()
+                        self.device.open(VENDOR_ID, PRODUCT_ID)
+                        # self.device.set_nonblocking(1)
+                        logger.info("✅ Reconnected successfully")
+                        self.set_brightness(self.config.brightness)
+                        self.update_all_keys(include_background=True)
+                    except Exception as e:
+                        logger.debug(f"Reconnection attempt failed: {e}")
+                        time.sleep(2)
+                        continue
+
+                # Periodic heartbeat log (every 10 seconds - kept at debug level)
+                if time.time() - last_heartbeat > 10:
+                    logger.debug("HID Polling heartbeat...")
+                    last_heartbeat = time.time()
+
                 try:
-                    # Read from HID device (non-blocking)
+                    # Read from HID device with small timeout
                     # Use REPORT_SIZE (512) as per endpoint wMaxPacketSize
-                    data = self.device.read(REPORT_SIZE)
+                    data = self.device.read(REPORT_SIZE, timeout_ms=50)
 
                     if data:
-                        logger.debug(f"HID Data ({len(data)} bytes): {bytes(data).hex()}")
+                        logger.debug(f"HID Data Received ({len(data)} bytes): {bytes(data).hex()}")
 
                         if len(data) >= 11:
                             # data[9] = key (physical code)
@@ -163,9 +194,11 @@ class StreamDockLauncherDirect:
                                 elif state == 0x02:
                                     logger.info(f"Key {key} released (raw: 0x{raw_key:02x})")
 
-                except OSError as e:
-                    # Log but keep running unless it's a fatal error
-                    logger.debug(f"HID read error: {e}")
+                except (OSError, ValueError) as e:
+                    # Log as warning if it looks like a disconnection
+                    # ValueError is thrown by some versions of hidapi when device is closed
+                    logger.warning(f"HID read error ({type(e).__name__}): {e}")
+                    self.device = None # Trigger reconnection
                     time.sleep(1) # Wait longer on error
                 except Exception as e:
                     logger.error(f"Unexpected error in HID loop: {e}", exc_info=True)
@@ -221,6 +254,13 @@ class StreamDockLauncherDirect:
             # Turn OFF: Send black images to all keys and kill backlight
             logger.info("Turning display OFF (killing backlight and sending black icons)")
             self.set_brightness(0)
+            
+            # Set background to black (if not already)
+            # Some units might keep the background visible even if icons are "off"
+            # so we force a black background during sleep.
+            black_bg = self.icon_manager.prepare_background("black")
+            self.set_key_image(0, black_bg)
+            
             for key_id in range(1, 16):
                 processed_path = self.icon_manager.prepare_icon(None, "")
                 self.set_key_image(key_id, processed_path)
@@ -228,7 +268,19 @@ class StreamDockLauncherDirect:
             # Turn ON: Restore original icons and brightness
             logger.info("Turning display ON (restoring icons and brightness)")
             self.set_brightness(self.config.brightness)
-            self.update_all_keys()
+            
+            # Restore custom background if any
+            if self.config.background:
+                logger.debug(f"Restoring background: {self.config.background}")
+                bg_path = self.icon_manager.prepare_background(self.config.background)
+                self.set_key_image(0, bg_path)
+            else:
+                # Default to black if no background configured
+                logger.debug("Restoring default black background")
+                black_bg = self.icon_manager.prepare_background("black")
+                self.set_key_image(0, black_bg)
+                
+            self.update_all_keys(include_background=False) # update_all_keys(True) would be redundant here
             
         return True
 
@@ -265,8 +317,18 @@ class StreamDockLauncherDirect:
         except Exception as e:
             logger.error(f"Failed to set image for key {key}: {e}")
 
-    def update_all_keys(self):
-        """Apply icons to all configured keys"""
+    def update_all_keys(self, include_background: bool = True):
+        """Apply icons to all configured keys and optionally the background"""
+        if include_background:
+            if self.config.background:
+                logger.info(f"Applying background: {self.config.background}")
+                bg_path = self.icon_manager.prepare_background(self.config.background)
+                self.set_key_image(0, bg_path)
+            else:
+                logger.info("Applying default black background")
+                black_bg = self.icon_manager.prepare_background("black")
+                self.set_key_image(0, black_bg)
+
         logger.info("Applying icons to all keys...")
         for key_id in range(1, 16):
             binding = self.config.get_binding(key_id)

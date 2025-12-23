@@ -1,7 +1,7 @@
 {
   "device": {
     "brightness": 80,
-    "background": null
+    "background": "black"
   },
   "keys": {
     "1": {
