@@ -13,15 +13,17 @@ logger = logging.getLogger(__name__)
 class IconManager:
     """Manages icons for Stream Dock buttons"""
 
-    def __init__(self, button_size=(100, 100), rotation=0):
+    def __init__(self, button_size=(96, 96), rotation=180, icon_size=(72, 72)):
         """
         Initialize icon manager
 
         Args:
-            button_size: Target size for button icons (width, height)
-            rotation: Rotation angle (0° for correct orientation)
+            button_size: Canvas size for button icons (width, height)
+            rotation: Rotation angle (180° for Stream Dock 293)
+            icon_size: Actual size of the icon within the canvas
         """
         self.button_size = button_size
+        self.icon_size = icon_size
         self.rotation = rotation
         self.icon_cache: Dict[str, str] = {}  # path -> processed_path
         self.temp_dir = "/tmp/streamdock_icons"
@@ -130,8 +132,17 @@ class IconManager:
             if img.mode != 'RGB':
                 img = img.convert('RGB')
 
-            # Resize to button size
-            img = img.resize(self.button_size, Image.Resampling.LANCZOS)
+            # Resize icon to icon_size
+            img = img.resize(self.icon_size, Image.Resampling.LANCZOS)
+
+            # Create black canvas of button_size
+            canvas = Image.new('RGB', self.button_size, color='black')
+            
+            # Center icon on canvas
+            x = (self.button_size[0] - self.icon_size[0]) // 2
+            y = (self.button_size[1] - self.icon_size[1]) // 2
+            canvas.paste(img, (x, y))
+            img = canvas
 
             # Add label if provided
             if label:

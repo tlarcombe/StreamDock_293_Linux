@@ -97,7 +97,7 @@ class StreamDockLauncherDirect:
 
         # Initialize icon manager (specifically for Stream Dock 293)
         logger.info("Initializing icon manager...")
-        self.icon_manager = IconManager(button_size=(100, 100), rotation=180)
+        self.icon_manager = IconManager(button_size=(96, 96), rotation=180, icon_size=(72, 72))
 
         # Open HID device directly
         logger.info(f"Opening HID device (VID: 0x{VENDOR_ID:04x}, PID: 0x{PRODUCT_ID:04x})...")
@@ -116,8 +116,28 @@ class StreamDockLauncherDirect:
             # Apply initial configuration
             self.set_brightness(self.config.brightness)
             
-            # Initial update of all keys and background
-            self.update_all_keys(include_background=True)
+            # 1. Clear screen
+            logger.info("Sending screen clear command (CMD_CLE)...")
+            self.clear_screen()
+
+            # 2. Deep Clean - Wipe all indices (0-255) with DEL and LIG(0)
+            logger.info("Performing deep clean (Wiping all 256 indices)...")
+            self.deep_clean()
+            
+            # Final attempt at a Global Reset/Initialize command
+            logger.info("Sending Global Reset (CRTINT)...")
+            self._send_report(PREFIX + b"INT" + (0).to_bytes(4, 'big') + b"\x00")
+            time.sleep(0.5)
+
+            # Additional targeted background clear with a physical black image
+            logger.info("Neutralizing wallpaper with black frame...")
+            black_bg = self.icon_manager.prepare_background("black")
+            for idx in [17, 0, 16, 18]:
+                self.set_key_image(idx, black_bg, cmd=CMD_WPA)
+                time.sleep(0.1)
+
+            # 3. Apply key icons ONE BY ONE with delays
+            self.update_all_keys(include_background=False)
 
         except Exception as e:
             logger.error(f"Failed to open HID device: {e}")
@@ -240,8 +260,21 @@ class StreamDockLauncherDirect:
         logger.info(f"Setting brightness to {value}%")
         try:
             # Command: PREFIX + CMD_LIG + brightness_byte
-            payload = PREFIX + CMD_LIG + bytes([value])
-            self._send_report(payload)
+            # If value is 0, we perform a sweep of all possible indices to ensure absolute blackout
+            if value == 0:
+                logger.info("  Zero brightness requested (Absolute Blackout)")
+                # 1. Send Global 0
+                self._send_report(PREFIX + CMD_LIG + bytes([0]))
+                
+                # 2. Sweep all per-index candidates
+                for idx in range(256):
+                    # Format: PREFIX + CMD_LIG + size(0) + index
+                    payload = PREFIX + CMD_LIG + (0).to_bytes(4, 'big') + bytes([idx])
+                    self._send_report(payload)
+            else:
+                # Normal global brightness command
+                payload = PREFIX + CMD_LIG + bytes([value])
+                self._send_report(payload)
         except Exception as e:
             logger.error(f"Failed to set brightness: {e}")
 
@@ -267,17 +300,16 @@ class StreamDockLauncherDirect:
         logger.info(f"Toggling display: {state_str}")
 
         if not self.display_on:
-            # Turn OFF: Send black images to all keys and kill backlight
-            logger.info("Turning display OFF (killing backlight and sending black icons)")
+            # Turn OFF: Sweep all indices to 0 brightness and send black icons
+            logger.info("Turning display OFF (absolute blackout)")
             self.set_brightness(0)
             
-            # Clear screen first to ensure no persistence
-            self.clear_screen()
-            
-            # Set background to black
+            # Set background to black (just in case)
             black_bg = self.icon_manager.prepare_background("black")
-            self.set_key_image(17, black_bg, cmd=CMD_WPA)
+            for idx in [17, 0, 16, 18]:
+                self.set_key_image(idx, black_bg, cmd=CMD_WPA)
             
+            # Send black icons to all keys to be thorough
             for key_id in range(1, 16):
                 processed_path = self.icon_manager.prepare_icon(None, "")
                 self.set_key_image(key_id, processed_path)
@@ -285,23 +317,14 @@ class StreamDockLauncherDirect:
             # Turn ON: Restore original icons and brightness
             logger.info("Turning display ON (restoring icons and brightness)")
             
-            # Clear screen first
-            self.clear_screen()
-            
+            # Restore brightness
             self.set_brightness(self.config.brightness)
             
-            # Restore custom background if any
-            if self.config.background:
-                logger.debug(f"Restoring background: {self.config.background}")
-                bg_path = self.icon_manager.prepare_background(self.config.background)
-                self.set_key_image(17, bg_path, cmd=CMD_WPA)
-            else:
-                # Default to black if no background configured
-                logger.debug("Restoring default black background")
-                black_bg = self.icon_manager.prepare_background("black")
-                self.set_key_image(17, black_bg, cmd=CMD_WPA)
+            # Restore background
+            bg_path = self.icon_manager.prepare_background(self.config.background or "black")
+            self.set_key_image(17, bg_path, cmd=CMD_WPA)
                 
-            self.update_all_keys(include_background=False) # update_all_keys(True) would be redundant here
+            self.update_all_keys(include_background=False)
             
         return True
 
@@ -338,23 +361,28 @@ class StreamDockLauncherDirect:
         except Exception as e:
             logger.error(f"Failed to set image for key {key}: {e}")
 
-    def update_all_keys(self, include_background: bool = True):
-        """Apply icons to all configured keys and optionally the background"""
-        # Always clear screen before a full update
-        self.clear_screen()
+    def deep_clean(self):
+        """Exhaustively wipe all possible indices on the device"""
+        logger.info("  Sending CMD_DEL to all indices (0-255)...")
+        for idx in range(256):
+            payload = PREFIX + b"DEL" + (0).to_bytes(4, 'big') + bytes([idx])
+            self._send_report(payload)
+            if idx % 64 == 0: time.sleep(0.1)
+            
+        logger.info("  Sending zero brightness (CMD_LIG) to all indices (0-255)...")
+        for idx in range(256):
+            # Try setting brightness to 0 for each index
+            payload = PREFIX + CMD_LIG + (0).to_bytes(4, 'big') + bytes([idx])
+            self._send_report(payload)
+            if idx % 64 == 0: time.sleep(0.1)
 
-        if include_background:
-            if self.config.background:
-                logger.info(f"Applying background: {self.config.background}")
-                bg_path = self.icon_manager.prepare_background(self.config.background)
-                self.set_key_image(17, bg_path, cmd=CMD_WPA)
-            else:
-                logger.info("Applying default black background")
-                black_bg = self.icon_manager.prepare_background("black")
-                self.set_key_image(17, black_bg, cmd=CMD_WPA)
+        time.sleep(0.5)
 
-        logger.info("Applying icons to all keys...")
+    def update_all_keys(self, include_background: bool = False):
+        """Apply icons to all configured keys ONE BY ONE"""
+        logger.info("Applying icons to all keys one by one...")
         for key_id in range(1, 16):
+            logger.info(f"  Programming button {key_id}...")
             binding = self.config.get_binding(key_id)
             icon_path = None
             label = ""
@@ -370,8 +398,18 @@ class StreamDockLauncherDirect:
             # Prepare icon (will create default if path is None)
             processed_path = self.icon_manager.prepare_icon(icon_path, label)
             self.set_key_image(key_id, processed_path)
+            
+            # Reduced delay for faster responsiveness as requested
+            time.sleep(0.1)
 
-        logger.info("✅ All icons applied")
+        if include_background:
+            # Neutralize background slots if requested
+            bg_path = self.icon_manager.prepare_background(self.config.background or "black")
+            for idx in [17, 0, 16, 18, 19, 32, 64, 128, 255]:
+                self.set_key_image(idx, bg_path, cmd=CMD_WPA)
+                time.sleep(0.2)
+
+        logger.info("✅ All icons applied one by one")
 
     def shutdown(self):
         """Clean shutdown"""
