@@ -244,6 +244,21 @@ class StreamDockLauncherDirect:
         except Exception as e:
             logger.error(f"Failed to set brightness: {e}")
 
+    def clear_screen(self):
+        """Send CMD_CLE to reset the persistent background/screen state"""
+        if not self.device:
+            return
+
+        logger.info("Sending screen clear command (CMD_CLE)...")
+        try:
+            # Command: PREFIX + CMD_CLE
+            payload = PREFIX + CMD_CLE
+            self._send_report(payload)
+            # Give the device a moment to process the clear
+            time.sleep(0.1)
+        except Exception as e:
+            logger.error(f"Failed to clear screen: {e}")
+
     def toggle_display(self) -> bool:
         """Toggle the display on/off"""
         self.display_on = not self.display_on
@@ -255,9 +270,10 @@ class StreamDockLauncherDirect:
             logger.info("Turning display OFF (killing backlight and sending black icons)")
             self.set_brightness(0)
             
-            # Set background to black (if not already)
-            # Some units might keep the background visible even if icons are "off"
-            # so we force a black background during sleep.
+            # Clear screen first to ensure no persistence
+            self.clear_screen()
+            
+            # Set background to black
             black_bg = self.icon_manager.prepare_background("black")
             self.set_key_image(0, black_bg)
             
@@ -267,6 +283,10 @@ class StreamDockLauncherDirect:
         else:
             # Turn ON: Restore original icons and brightness
             logger.info("Turning display ON (restoring icons and brightness)")
+            
+            # Clear screen first
+            self.clear_screen()
+            
             self.set_brightness(self.config.brightness)
             
             # Restore custom background if any
@@ -319,6 +339,9 @@ class StreamDockLauncherDirect:
 
     def update_all_keys(self, include_background: bool = True):
         """Apply icons to all configured keys and optionally the background"""
+        # Always clear screen before a full update
+        self.clear_screen()
+
         if include_background:
             if self.config.background:
                 logger.info(f"Applying background: {self.config.background}")
