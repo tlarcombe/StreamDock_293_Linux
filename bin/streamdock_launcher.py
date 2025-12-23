@@ -38,6 +38,7 @@ CMD_BAT = b"BAT"
 CMD_STP = b"STP\x00\x00"
 CMD_LIG = b"LIG\x00\x00"
 CMD_CLE = b"CLE\x00\x00\x00"
+CMD_WPA = b"WPA"
 
 # Report size
 REPORT_SIZE = 512
@@ -275,7 +276,7 @@ class StreamDockLauncherDirect:
             
             # Set background to black
             black_bg = self.icon_manager.prepare_background("black")
-            self.set_key_image(0, black_bg)
+            self.set_key_image(17, black_bg, cmd=CMD_WPA)
             
             for key_id in range(1, 16):
                 processed_path = self.icon_manager.prepare_icon(None, "")
@@ -293,19 +294,19 @@ class StreamDockLauncherDirect:
             if self.config.background:
                 logger.debug(f"Restoring background: {self.config.background}")
                 bg_path = self.icon_manager.prepare_background(self.config.background)
-                self.set_key_image(0, bg_path)
+                self.set_key_image(17, bg_path, cmd=CMD_WPA)
             else:
                 # Default to black if no background configured
                 logger.debug("Restoring default black background")
                 black_bg = self.icon_manager.prepare_background("black")
-                self.set_key_image(0, black_bg)
+                self.set_key_image(17, black_bg, cmd=CMD_WPA)
                 
             self.update_all_keys(include_background=False) # update_all_keys(True) would be redundant here
             
         return True
 
-    def set_key_image(self, key: int, image_path: str):
-        """Send an image to a specific key"""
+    def set_key_image(self, key: int, image_path: str, cmd: bytes = CMD_BAT):
+        """Send an image to a specific key or wallpaper"""
         if not self.device:
             return
 
@@ -318,11 +319,11 @@ class StreamDockLauncherDirect:
                 img_data = f.read()
 
             size = len(img_data)
-            logger.debug(f"Sending image to key {key} ({size} bytes)")
+            logger.debug(f"Sending image to {cmd.decode()} index {key} ({size} bytes)")
 
-            # 1. Send Header (Prefix + BAT + size[4] + key[1])
+            # 1. Send Header (Prefix + CMD + size[4] + key[1])
             # size is big-endian 4 bytes
-            header = PREFIX + CMD_BAT + size.to_bytes(4, "big") + bytes([key])
+            header = PREFIX + cmd + size.to_bytes(4, "big") + bytes([key])
             self._send_report(header)
 
             # 2. Send Data Chunks (raw data, 512 bytes each, NO PREFIX)
@@ -346,11 +347,11 @@ class StreamDockLauncherDirect:
             if self.config.background:
                 logger.info(f"Applying background: {self.config.background}")
                 bg_path = self.icon_manager.prepare_background(self.config.background)
-                self.set_key_image(0, bg_path)
+                self.set_key_image(17, bg_path, cmd=CMD_WPA)
             else:
                 logger.info("Applying default black background")
                 black_bg = self.icon_manager.prepare_background("black")
-                self.set_key_image(0, black_bg)
+                self.set_key_image(17, black_bg, cmd=CMD_WPA)
 
         logger.info("Applying icons to all keys...")
         for key_id in range(1, 16):
