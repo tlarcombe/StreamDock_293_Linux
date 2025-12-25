@@ -1,7 +1,7 @@
 {
   "device": {
     "brightness": 80,
-    "background": "/home/tlarcombe/projects/StreamDock/icons/black_wallpaper.jpg"
+    "background": null
   },
   "keys": {
     "1": {
@@ -19,8 +19,8 @@
       "description": "Launch Chromium browser via custom script",
       "icon": "auto:chromium",
       "action": {
-        "type": "run_command",
-        "command": "/usr/local/bin/sh/WebBrowser_at_Mouse",
+        "type": "run_script",
+        "script": "/usr/local/bin/sh/WebBrowser_at_Mouse",
         "detach": true
       }
     },
@@ -55,59 +55,76 @@
       }
     },
     "6": {
-      "name": "Unassigned",
-      "description": "No action",
-      "icon": null,
+      "name": "LibreOffice Writer",
+      "description": "Launch LibreOffice Writer",
+      "icon": "auto:libreoffice-writer",
       "action": {
-        "type": "none"
+        "type": "launch_app",
+        "command": "libreoffice",
+        "args": ["--writer"],
+        "detach": true
       }
     },
     "7": {
-      "name": "Unassigned",
-      "description": "No action",
-      "icon": null,
+      "name": "LibreOffice Calc",
+      "description": "Launch LibreOffice Calc",
+      "icon": "auto:libreoffice-calc",
       "action": {
-        "type": "none"
+        "type": "launch_app",
+        "command": "libreoffice",
+        "args": ["--calc"],
+        "detach": true
       }
     },
     "8": {
-      "name": "Unassigned",
-      "description": "No action",
-      "icon": null,
+      "name": "GIMP",
+      "description": "Launch GIMP image editor",
+      "icon": "auto:gimp",
       "action": {
-        "type": "none"
+        "type": "launch_app",
+        "command": "gimp",
+        "detach": true
       }
     },
     "9": {
-      "name": "Unassigned",
-      "description": "No action",
-      "icon": null,
+      "name": "VLC",
+      "description": "Launch VLC media player",
+      "icon": "auto:vlc",
       "action": {
-        "type": "none"
+        "type": "launch_app",
+        "command": "vlc",
+        "detach": true
       }
     },
     "10": {
-      "name": "Unassigned",
-      "description": "No action",
-      "icon": null,
+      "name": "Claude+",
+      "description": "Launch Claude Code assistant",
+      "icon": "/home/tlarcombe/projects/StreamDock/icons/claude.png",
       "action": {
-        "type": "none"
+        "type": "launch_app",
+        "command": "xfce4-terminal",
+        "args": ["-e", "/home/tlarcombe/.local/bin/claude+"],
+        "detach": true
       }
     },
     "11": {
-      "name": "Unassigned",
-      "description": "No action",
-      "icon": null,
+      "name": "System Monitor",
+      "description": "Launch system monitor",
+      "icon": "auto:htop",
       "action": {
-        "type": "none"
+        "type": "launch_app",
+        "command": "xfce4-taskmanager",
+        "detach": true
       }
     },
     "12": {
-      "name": "Unassigned",
-      "description": "No action",
-      "icon": null,
+      "name": "Screenshot",
+      "description": "Take a screenshot",
+      "icon": "auto:applets-screenshooter",
       "action": {
-        "type": "none"
+        "type": "launch_app",
+        "command": "xfce4-screenshooter",
+        "detach": true
       }
     },
     "13": {
@@ -119,11 +136,13 @@
       }
     },
     "14": {
-      "name": "Unassigned",
-      "description": "No action",
-      "icon": null,
+      "name": "Audio Mixer",
+      "description": "Launch PulseAudio mixer",
+      "icon": "auto:multimedia-volume-control",
       "action": {
-        "type": "none"
+        "type": "launch_app",
+        "command": "pavucontrol",
+        "detach": true
       }
     },
     "15": {
